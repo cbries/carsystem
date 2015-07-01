@@ -14,7 +14,7 @@ const uint8_t PinBack = 9;
 const uint8_t PinTurnLeft = 8;
 const uint8_t PinTurnRight = 7; 
 
-Engine engine(PinEngine, 3.3);
+Engine engine(PinEngine, MaxVoltage);
 CarLamps frontLights(PinFront);
 CarLamps backLights(PinBack);
 CarTurnLights turnLights(PinTurnLeft, PinTurnRight);
@@ -41,12 +41,12 @@ void loop()
     switch(TurnLightsIndex)
     {
       case 0: 
-        engine.ChangeSpeedTo(0);
+        engine.ChangeSpeedTo(100);
         turnLights.Start(CarTurnLights::None); 
       break;
       
       case 1: 
-        engine.ChangeSpeedTo(90, 15);
+        engine.ChangeSpeedTo(100, 15);
         turnLights.Start(CarTurnLights::Left); 
       break;
       
@@ -56,12 +56,12 @@ void loop()
       break;
       
       case 3: 
-        engine.ChangeSpeedTo(75);
+        engine.ChangeSpeedTo(100);
         turnLights.Start(CarTurnLights::LeftRight);
       break;
     }
     
-    WallTime = millis() + 5000;
+    WallTime = millis() + 10000;
     
     TurnLightsIndex++;
     if(TurnLightsIndex >= TurnLightsIndexMax)
