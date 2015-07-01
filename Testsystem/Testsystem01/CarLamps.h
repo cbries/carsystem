@@ -15,7 +15,9 @@
 class CarLamps
 {
 public:
+  CarLamps();
   CarLamps(uint8_t pin);
+  inline void SetPin(uint8_t pin);
   void Switch(bool state);
   void Toggle();
   void Tick();
@@ -35,8 +37,8 @@ public:
   enum Side { None=0, Left=1, Right=2, LeftRight=3 };
   
 private:
-  CarLamps *_leftLamps;
-  CarLamps *_rightLamps;
+  CarLamps _leftLamps;
+  CarLamps _rightLamps;
   
   const static unsigned long Intervall = 500;
   

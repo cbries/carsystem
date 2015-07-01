@@ -6,9 +6,18 @@
 
 #include "CarLamps.h"
 
+CarLamps::CarLamps()
+{ }
+
 CarLamps::CarLamps(uint8_t pin)
   : _pin(pin)
 {
+  pinMode(_pin, OUTPUT);
+}
+
+void CarLamps::SetPin(uint8_t pin)
+{
+  _pin = pin;
   pinMode(_pin, OUTPUT);
 }
 
@@ -44,8 +53,8 @@ void CarLamps::Tick()
 CarTurnLights::CarTurnLights(uint8_t pinLeft, uint8_t pinRight)
   : _side(None)
 {
-  _leftLamps = new CarLamps(pinLeft);
-  _rightLamps = new CarLamps(pinRight);
+  _leftLamps.SetPin(pinLeft);
+  _rightLamps.SetPin(pinRight);
 }
 
 void CarTurnLights::Start(Side side, unsigned long intervall)
@@ -61,8 +70,8 @@ void CarTurnLights::Stop()
   _previousMillis = 0;  
   _intervall = 0;
   _side = None;
-  _leftLamps->Switch(false);
-  _rightLamps->Switch(false);
+  _leftLamps.Switch(false);
+  _rightLamps.Switch(false);
 }
 
 void CarTurnLights::Tick()
@@ -73,11 +82,11 @@ void CarTurnLights::Tick()
     switch(_side)
     {
       case None: Stop(); break;
-      case Left: _leftLamps->Toggle(); break;
-      case Right: _rightLamps->Toggle(); break;
+      case Left: _leftLamps.Toggle(); break;
+      case Right: _rightLamps.Toggle(); break;
       case LeftRight: 
-        _leftLamps->Toggle();
-        _rightLamps->Toggle();
+        _leftLamps.Toggle();
+        _rightLamps.Toggle();
       break;
     }
     
