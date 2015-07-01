@@ -9,15 +9,17 @@
 
 #include "Arduino.h"
 
-#define MAXVOLTAGE_FOR_5  // ATmega328 (5V, 16 MHz)
-//#define MAXVOLTAGE_FOR_3_3  // tbd
+//#define MAXVOLTAGE_FOR_5  // ATmega328 (5V, 16 MHz)
+#define MAXVOLTAGE_FOR_3_3  // tbd
 
 #ifdef MAXVOLTAGE_FOR_5
   const float MaxVoltage = 5.0f;
-#elif MAXVOLTAGE_FOR_3_3
-  const float MaxVoltage = 3.3f;
 #else
-  const float MaxVoltage = 3.3f;
+  #ifdef MAXVOLTAGE_FOR_3_3
+    const float MaxVoltage = 3.3f;
+  #else
+    const float MaxVoltage = 3.3f;
+  #endif
 #endif
 
 #define DEFAULT_ENGINE_STEPS 5

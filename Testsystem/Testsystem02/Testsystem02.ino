@@ -7,7 +7,7 @@
 #include <SoftPWM.h>
 #include <SoftPWM_timer.h>
 
-uint8_t PinNormal = 4;
+//uint8_t PinNormal = 4;
 uint8_t PinBlink = 3;
 uint8_t PinBreakDown = 2;
 
@@ -29,8 +29,8 @@ const int Maximum_Blink = 90;
 
 void setup()
 {
-  pinMode(PinNormal, OUTPUT);
-  digitalWrite(PinNormal, HIGH);
+//  pinMode(PinNormal, OUTPUT);
+//  digitalWrite(PinNormal, HIGH);
   
   SoftPWMBegin();
   SoftPWMSet(PinBlink, Minimum_Blink);
