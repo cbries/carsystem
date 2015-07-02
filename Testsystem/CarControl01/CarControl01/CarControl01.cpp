@@ -25,7 +25,10 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
-ISR (TIM0_OVF_vect)
+/*
+ * Datasheet ATTiny13A, page 44
+ */
+ISR (TIM0_COMPA_vect /*TIM0_OVF_vect*/)
 {
 	static long overflowCounter = 0;
 	if(++overflowCounter >= 1200)
