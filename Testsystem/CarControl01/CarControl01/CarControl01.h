@@ -23,7 +23,9 @@ T map(T x, T in_min, T in_max, T out_min, T out_max)
 
 volatile unsigned long __timeCounterMsecs = 0;
 
-inline unsigned long millis() { return __timeCounterMsecs; }
+inline unsigned long millis() { 
+	return __timeCounterMsecs; 
+}
 
 
 #endif /* _CARCONTROL01_H_ */

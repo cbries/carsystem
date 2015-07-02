@@ -5,7 +5,7 @@
  *  Author: Christian Benjamin Ries
  */ 
 
-#define F_CPU 9600000
+#define F_CPU 9600000UL
 #define PIN_ENGINE PB1
 #define PIN_REAR_LAMPS PB0
 #define PIN_FRONT_LAMPS PB2
@@ -155,6 +155,8 @@ int main(void)
 	TCCR0A |= (1 << WGM01) | (1 << WGM00);
 	// Clear OC0B output on compare match, upwards counting.
 	TCCR0A |= (1 << COM0B1);
+	// enable timer overflow interrupt
+	TIMSK0 |= 1 << TOIE0;
 	
 	Engine engine(PIN_ENGINE);
 	Lamps frontLamps(PIN_FRONT_LAMPS);
@@ -166,6 +168,8 @@ int main(void)
 	uint8_t currentState = switchToState;
 	
 	unsigned long wallTime = 0;
+	
+	sei();
 	
     for(;;)
     {		
