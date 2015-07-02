@@ -7,14 +7,14 @@
 
 #define F_CPU 9600000UL
 #define PIN_ENGINE PB1
-#define PIN_REAR_LAMPS PB0
-#define PIN_FRONT_LAMPS PB2
-#define PIN_BLINK_LEFT PB3
-#define PIN_BLINK_RIGHT PB4
+#define PIN_REAR_LAMPS PB4
+#define PIN_FRONT_LAMPS PB3
+#define PIN_BLINK_LEFT PB2
+#define PIN_BLINK_RIGHT PB5
 
 #define WALLTIME_STATEMACHINE 5000
-#define WALLTIME_ENGINE 500
-#define WALLTIME_BLINK 250
+#define WALLTIME_ENGINE 250
+#define WALLTIME_BLINK 450
 
 //#define MAXVOLTAGE_FOR_5  // ATmega328 (5V, 16 MHz)
 #define MAXVOLTAGE_FOR_3_3  // ATTiny13A (used when assembled, 3.3V, ~10 MHz)
@@ -23,21 +23,6 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <util/delay.h>
-
-/*
- * Datasheet ATTiny13A, page 44
- */
-ISR (TIM0_COMPA_vect /*TIM0_OVF_vect*/)
-{
-	static long overflowCounter = 0;
-	if(++overflowCounter >= 1200)
-	{
-		++__timeCounterMsecs;
-
-		overflowCounter = 0;		
-	}
-}
 
 class Engine
 {
@@ -73,9 +58,7 @@ public:
 	
 		if(_walltime > millis())
 			return;
-		
-		_walltime = millis() + WALLTIME_ENGINE;
-		
+				
 		uint8_t delta = 0;
 		
 		if(_targetSpeed < _currentSpeed)
@@ -95,7 +78,9 @@ public:
 			_currentSpeed += _targetStepping;
 		}
 
-		OCR0B = _currentSpeed;		
+		OCR0B = _currentSpeed;
+		
+		_walltime = millis() + WALLTIME_ENGINE;
 	}	
 };
 
@@ -122,8 +107,8 @@ public:
 
 		switch(_mode)
 		{
-			case On: sbi(_pin, 1); _currentState = true; break;
-			case Off: sbi(_pin, 0); _currentState = false; break;
+			case On: sbi(PORTB, _pin); _currentState = true; break;
+			case Off: cbi(PORTB, _pin); _currentState = false; break;
 			case Blink: /* ignore */ break;
 		}
 	}
@@ -135,31 +120,35 @@ public:
 			
 		if(_walltime > millis())
 			return;
-			
-		_walltime = millis() + WALLTIME_BLINK;
-		
+					
 		_currentState = !_currentState;
-		
+
 		if(_currentState)
-			sbi(_pin, 1);
+			sbi(PORTB, _pin);
 		else
-			sbi(_pin, 0);
+			cbi(PORTB, _pin);
+
+		_walltime = millis() + WALLTIME_BLINK;
 	}	
 };
 
 int main(void)
-{
-	// \see http://www.adnbr.co.uk/articles/adc-and-pwm-basics
-	DDRB = 1<<DDB5 | 1<<DDB4 | 1<<DDB3 | 1<<DDB2 | 1<<DDB1 | 1<<DDB0;
-	// Set Timer 0 prescaler to clock/8.
-	// At 9.6 MHz this is 1.2 MHz.
-	TCCR0B |= (1 << CS01) | (1 << CS00);
-	// Set to 'Fast PWM' mode
+{	
+	DDRB = (1<<DDB5) | (1<<DDB4) | (1<<DDB3) | (1<<DDB2) | (1<<DDB1) | (1<<DDB0);
+	/*
+		CS02 CS01 CS00 Description
+		 0    0    0   No clock source (Timer/Counter stopped)
+		 0    0    1   clkI/O/(No prescaling)
+		 0    1    0   clkI/O/8 (From prescaler)
+		 0    1    1   clkI/O/64 (From prescaler)
+		 1    0    0   clkI/O/256 (From prescaler)
+		 1    0    1   clkI/O/1024 (From prescaler)
+	*/	
+	TCCR0B |= (0 << CS02) | (0 << CS01) | (1 << CS00);
 	TCCR0A |= (1 << WGM01) | (1 << WGM00);
-	// Clear OC0B output on compare match, upwards counting.
 	TCCR0A |= (1 << COM0B1);
-	// enable timer overflow interrupt
-	TIMSK0 |= 1 << TOIE0;
+	TIMSK0 |= 1<<TOIE0;
+	sei();
 	
 	Engine engine(PIN_ENGINE);
 	Lamps frontLamps(PIN_FRONT_LAMPS);
@@ -171,9 +160,7 @@ int main(void)
 	uint8_t currentState = switchToState;
 	
 	unsigned long wallTime = 0;
-	
-	sei();
-	
+		
     for(;;)
     {		
 		engine.tick();
@@ -181,16 +168,21 @@ int main(void)
 		rearLamps.tick();
 		leftBlinker.tick();
 		rightBlinker.tick();
-		
+			
 		// Must be changed for cover any switch case.
-		#define MAXSTATES 5
+		#define MAXSTATES 6
 
-		if(wallTime < millis())
+		unsigned long currentMillis = millis();
+
+		if(wallTime < currentMillis)
 		{
-			wallTime = millis() + WALLTIME_STATEMACHINE;
-
-			if(++switchToState >= MAXSTATES)
+			++switchToState;
+			if(switchToState >= MAXSTATES)
 				switchToState = 0;
+		}
+		else
+		{
+			continue;
 		}
 		
 		if(switchToState == currentState)
@@ -201,32 +193,35 @@ int main(void)
 		switch(currentState)
 		{
 			case 0: 
-				engine.setSpeed(0);
-				leftBlinker.changeMode(Lamps::Off);
-				rightBlinker.changeMode(Lamps::Off);
 				frontLamps.changeMode(Lamps::Off);
-				rearLamps.changeMode(Lamps::Off);
+				frontLamps.changeMode(Lamps::Blink);
 			break;
 			
 			case 1:
-				engine.setSpeed(25);
-				leftBlinker.changeMode(Lamps::Blink);
-			break;
+				frontLamps.changeMode(Lamps::On);
+				rearLamps.changeMode(Lamps::Off);
+			break;	
 			
 			case 2:
-				engine.setSpeed(50);
-				rightBlinker.changeMode(Lamps::Blink);
-			break;	
-
+				frontLamps.changeMode(Lamps::Off);
+				rearLamps.changeMode(Lamps::Off);
+				
+				engine.setSpeed(50, 25);
+			break;
+			
 			case 3:
-				engine.setSpeed(75);
-				frontLamps.changeMode(Lamps::On);
-				rearLamps.changeMode(Lamps::On);
+				engine.setSpeed(75, 10);
 			break;
-
-			case 4:
-				engine.setSpeed(100);
+			
+			case 4: 
+				engine.setSpeed(100, 10);
 			break;
-		}
+			
+			case 5:
+				engine.setSpeed(0, 50);
+			break;
+		}		
+		
+		wallTime = currentMillis + WALLTIME_STATEMACHINE;
     }
 }
