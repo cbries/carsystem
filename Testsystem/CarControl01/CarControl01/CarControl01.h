@@ -19,19 +19,20 @@
 
 volatile unsigned long __timeCounterMsecs = 0;
 
-ISR (TIM0_COMPA_vect)
+#if defined (__AVR_ATtiny13__)
+	// Datasheet ATTiny13A, page 44
+ 	ISR (TIM0_OVF_vect)
+#else
+	#if defined (__AVR_ATtiny85__)
+		ISR(TIMER0_OVF_vect)
+	#else
+		#pragma error "Missing target cpu!"
+	#endif
+#endif
 {
-	// ignore
-}
+	static uint16_t overflowCounter = 0;
 
-/*
- * Datasheet ATTiny13A, page 44
- */
-ISR (TIM0_OVF_vect)
-{
-	static uint8_t overflowCounter = 0;
-
-	if(++overflowCounter >= 4)
+	if(++overflowCounter > 4)
 	{
 		__timeCounterMsecs++;
 

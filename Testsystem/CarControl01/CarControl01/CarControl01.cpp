@@ -5,7 +5,9 @@
  *  Author: Christian Benjamin Ries
  */ 
 
-#define F_CPU 9600000UL
+#ifndef F_CPU
+	#define F_CPU 9600000UL
+#endif
 #define PIN_ENGINE PB1
 #define PIN_REAR_LAMPS PB4
 #define PIN_FRONT_LAMPS PB3
@@ -132,8 +134,8 @@ public:
 	}	
 };
 
-int main(void)
-{	
+inline void setup()
+{
 	DDRB = (1<<DDB5) | (1<<DDB4) | (1<<DDB3) | (1<<DDB2) | (1<<DDB1) | (1<<DDB0);
 	/*
 		CS02 CS01 CS00 Description
@@ -144,11 +146,26 @@ int main(void)
 		 1    0    0   clkI/O/256 (From prescaler)
 		 1    0    1   clkI/O/1024 (From prescaler)
 	*/	
-	TCCR0B |= (0 << CS02) | (0 << CS01) | (1 << CS00);
+	TCCR0B |= (0 << CS02) | (1 << CS01) | (0 << CS00);
 	TCCR0A |= (1 << WGM01) | (1 << WGM00);
 	TCCR0A |= (1 << COM0B1);
-	TIMSK0 |= 1<<TOIE0;
-	sei();
+	
+	#if defined (__AVR_ATtiny13__)
+		TIMSK0 |= 1<<TOIE0;
+	#else
+		#if defined (__AVR_ATtiny85__)
+			TIMSK |= (1 << TOIE0);
+		#else
+			#pragma error "Missing target cpu!"
+		#endif
+	#endif
+
+	sei();	
+}
+
+int main(void)
+{	
+	setup();
 	
 	Engine engine(PIN_ENGINE);
 	Lamps frontLamps(PIN_FRONT_LAMPS);
