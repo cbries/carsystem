@@ -14,7 +14,7 @@
 #define PIN_BLINK_LEFT PB2
 #define PIN_BLINK_RIGHT PB5
 
-#define WALLTIME_STATEMACHINE 5000
+#define WALLTIME_STATEMACHINE 50
 #define WALLTIME_ENGINE 250
 #define WALLTIME_BLINK 450
 
@@ -80,7 +80,8 @@ public:
 			_currentSpeed += _targetStepping;
 		}
 
-		OCR0B = _currentSpeed;
+		//OCR0B = _currentSpeed;
+		OCR0A = _currentSpeed;
 		
 		_walltime = millis() + WALLTIME_ENGINE;
 	}	
@@ -147,6 +148,7 @@ inline void setup()
 		 1    0    1   clkI/O/1024 (From prescaler)
 	*/	
 	TCCR0B |= (0 << CS02) | (1 << CS01) | (0 << CS00);
+	
 	TCCR0A |= (1 << WGM01) | (1 << WGM00);
 	TCCR0A |= (1 << COM0B1);
 	
@@ -174,7 +176,7 @@ int main(void)
 	Lamps rightBlinker(PIN_BLINK_RIGHT);	
 	
 	uint8_t switchToState = 0;
-	uint8_t currentState = switchToState;
+	uint8_t currentState = -1;
 	
 	unsigned long wallTime = 0;
 		
@@ -194,14 +196,11 @@ int main(void)
 		if(wallTime < currentMillis)
 		{
 			++switchToState;
+			
 			if(switchToState >= MAXSTATES)
 				switchToState = 0;
 		}
-		else
-		{
-			continue;
-		}
-		
+				
 		if(switchToState == currentState)
 			continue;
 		
