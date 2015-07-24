@@ -6,23 +6,104 @@
  */ 
 
 #include <avr/interrupt.h>
+#include <util/atomic.h>
 
-volatile unsigned long __msecs = 0;
+/*
 
-ISR(TIM0_OVF_vect) 
+PB0 = Frontlicht
+PB4 = Rücklicht
+
+PB1 = Blinker rechts
+PB5 = Blinker links
+
+PB2 = IR Receiver ?
+PB3 = Engine
+
+ */
+
+/*
+	Fcpu 1.2Mhz
+
+	Prescaler:
+		1 => 4,687Hz
+		8 => 585Hz
+		64 => 73Hz
+		256 => 18Hz
+
+	Fcpu 9.6Mhz
+
+	Prescaler:
+		1 => 37,500Hz
+		8 => 4,687Hz
+		64 => 585Hz
+		256 => 146Hz
+*/
+#define F_CPU 9600000UL#
+#define PIN_ENGINE PB3
+
+inline void toggleBlinker()
 {
-	static int timer_overflow_count = 0;
-	if (++timer_overflow_count > 4) 
-	{   
-		++__msecs;
-	
-		timer_overflow_count = 0;
+	PORTB ^= (1 << PB1);	// Blinker rechts
+	PORTB ^= (1 << PB5);		
+}
+
+inline void toggleLight(bool state)
+{
+	// PB0 := Frontlicht
+	// PB4 := Rücklicht
+	if(state)
+	{		
+		PORTB |= (1 << PB0);
+		PORTB |= (1 << PB4);		
 	}
+	else
+	{
+		PORTB &= ~(1 << PB0);
+		PORTB &= ~(1 << PB4);
+	}
+}
+
+inline void toggleEngine(bool state)
+{
+	if(state)
+		PORTB |= (1 << PIN_ENGINE);
+	else
+		PORTB &= ~(1 << PIN_ENGINE);
+}
+
+volatile unsigned long __timeCounterMsecs = 0;
+
+inline unsigned long millis()
+{
+	unsigned long millis_return;
+	ATOMIC_BLOCK(ATOMIC_FORCEON) {
+		millis_return = __timeCounterMsecs;
+	}
+	return millis_return;
+}
+
+ISR(TIM0_COMPA_vect)
+{
+	static uint8_t counter = 0;
+	
+	if(++counter >= 5)
+	{
+		++__timeCounterMsecs;
+
+		counter = 0;
+	}	
+}
+
+template<class T>
+T map(T x, T in_min, T in_max, T out_min, T out_max)
+{
+	return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
 int main(void) 
 {
 	DDRB = (1<<DDB5) | (1<<DDB4) | (1<<DDB3) | (1<<DDB2) | (1<<DDB1) | (1<<DDB0);
+
 	/*
 		CS02 CS01 CS00 Description
 		 0    0    0   No clock source (Timer/Counter stopped)
@@ -32,42 +113,29 @@ int main(void)
 		 1    0    0   clkI/O/256 (From prescaler)
 		 1    0    1   clkI/O/1024 (From prescaler)
 	*/	
-	TCCR0B |= (0 << CS02) | (0 << CS01) | (1 << CS00);
-	TCCR0A |= (1 << WGM01) | (1 << WGM00);
-	TCCR0A |= (1 << COM0B1);
-	TIMSK0 |= 1<<TOIE0;
+
+	OCR0A = 240;
+	TCNT0 = 0;
+	TIMSK0 = TIMSK0 | (1<<OCIE0A); 	//enable compare match interrupt
+	//TIMSK = TIMSK | (1<<OCIE0A); 	//enable compare match interrupt
+	TCCR0A = (1<<WGM01); 	        //CTC
+	TCCR0B |= (0 << CS02) | (1 << CS01) | (0 << CS00);
+
 	sei();
 
-	unsigned long wallTimeBlink = 0;
-	unsigned long wallTimeEngine = 0;
-	bool decrement = true;
-	uint8_t v = 255;
+	unsigned long walltime = 0;
 
-	while(1) 
+	toggleLight(true);
+	//toggleEngine(true);
+
+	for(;;) 
 	{
-		if(wallTimeBlink < __msecs)
+		unsigned long currentMillis = millis();
+		if(walltime < currentMillis)
 		{
-			wallTimeBlink = __msecs + 100;
+			walltime = currentMillis + 50;
 
-			PORTB ^= 1<<PB4;			
-		}
-		
-		if(wallTimeEngine < __msecs)
-		{
-			wallTimeEngine = __msecs + 5;
-			
-			if(decrement)
-			{
-				if(--v <= 0)
-					decrement = false;
-			}
-			else
-			{
-				if(++v >= 255)
-					decrement = true;
-			}
-				
-			OCR0B = v;
+			toggleBlinker();			
 		}
 	}
 }

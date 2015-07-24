@@ -9,12 +9,12 @@
 	#define F_CPU 9600000UL
 #endif
 #define PIN_ENGINE PB1
-#define PIN_REAR_LAMPS PB4
-#define PIN_FRONT_LAMPS PB3
-#define PIN_BLINK_LEFT PB2
-#define PIN_BLINK_RIGHT PB5
+#define PIN_REAR_LAMPS PB2//PB4
+#define PIN_FRONT_LAMPS PB2//PB3
+#define PIN_BLINK_LEFT PB2//PB2
+#define PIN_BLINK_RIGHT PB2//PB5
 
-#define WALLTIME_STATEMACHINE 50
+#define WALLTIME_STATEMACHINE 5000
 #define WALLTIME_ENGINE 250
 #define WALLTIME_BLINK 450
 
@@ -152,7 +152,7 @@ inline void setup()
 	TCCR0A |= (1 << WGM01) | (1 << WGM00);
 	TCCR0A |= (1 << COM0B1);
 	
-	#if defined (__AVR_ATtiny13__)
+	#if defined (__AVR_ATtiny13A__)
 		TIMSK0 |= 1<<TOIE0;
 	#else
 		#if defined (__AVR_ATtiny85__)

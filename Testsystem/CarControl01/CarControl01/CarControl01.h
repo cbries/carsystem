@@ -19,7 +19,7 @@
 
 volatile unsigned long __timeCounterMsecs = 0;
 
-#if defined (__AVR_ATtiny13__)
+#if defined (__AVR_ATtiny13A__)
 	// Datasheet ATTiny13A, page 44
  	ISR (TIM0_OVF_vect)
 #else
