@@ -1,15 +1,18 @@
 
-int voltagePin = 9;
-int voltageValue = 0;
+#define MAX_VOLTAGE 500
+#define N 3
+int voltagePins[N] = { 8, 9, 10 };
+int voltageValue = MAX_VOLTAGE;
 byte voltageTargetValue = 0;
-
-#define MAX_VOLTAGE 50
 
 void setup()
 {
-  pinMode(voltagePin, OUTPUT);
+  for(uint8_t i=0; i < N; ++i)
+    pinMode(voltagePins[i], OUTPUT);
   Serial.begin(9600);
   Serial.println("Ready... enter: + -");
+
+  voltageTargetValue = map(voltageValue, 0, MAX_VOLTAGE, 0, 255);
 }
 
 void checkSerial()
@@ -17,9 +20,14 @@ void checkSerial()
   if(Serial.available())
   {
     byte character = (char)Serial.read();
-    if(character == '+')
+    if(character == '\n')
+      return;
+    if(character == '\r')
+      return;
+      
+    if(character == '-')
       voltageValue += 1;
-    else if(character == '-')
+    else if(character == '+')
       voltageValue -= 1;
 
     if(voltageValue < 0)
@@ -32,7 +40,7 @@ void checkSerial()
     Serial.print("New Voltage: ");
     Serial.print(voltageTargetValue);
     Serial.print("  ");
-    Serial.print(voltageValue/10.f);
+    Serial.print((MAX_VOLTAGE/100) - voltageValue/100.f);
     Serial.println("V");
   }
 }
@@ -40,8 +48,9 @@ void checkSerial()
 void loop() 
 {
   checkSerial();
-  
-  analogWrite(voltagePin, voltageTargetValue);
+
+  for(uint8_t i = 0; i < N; ++i)   
+    analogWrite(voltagePins[i], voltageTargetValue);
   
   delay(30);
 }
