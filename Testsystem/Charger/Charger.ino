@@ -7,15 +7,30 @@ const uint8_t pinCharger = 10;
 const uint8_t pinVoltage = A0;
 
 const uint8_t N_Voltage = 10;
+const uint8_t N_RecentAverages = 5;
 
 const char NoBat[] = "No BAT!";
 const char BatOk[] = "BAT ok!";
 const char Unknown[] = "???";
+const char Initialize[] = "Initialize...";
+const char Ready[] = "Ready";
 
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
-float average = 0.0f;
 float minvoltage = 35.f;
+float recentaverages[N_RecentAverages] = {0.0f};
+
+void push(float average)
+{
+  for(uint8_t i=0; i < N_RecentAverages - 1; ++i)
+    recentaverages[i] = recentaverages[i];
+  recentaverages[N_RecentAverages - 1] = average;
+}
+
+inline float last()
+{
+  return recentaverages[N_RecentAverages - 1];
+}
 
 void setup() 
 {
@@ -30,18 +45,36 @@ void setup()
   Serial.begin(9600);
 
   lcd.begin(20, 4);
-  lcd.print(Unknown);
+  lcd.print(Initialize);
+
+  for(uint8_t i=0; i < N_RecentAverages; ++i)
+  {
+    bool hasVoltage;
+    float value = checkVoltage(hasVoltage);
+    push(value);
+  }
+
+  printState(Ready);
+}
+
+inline void clear()
+{
+  lcd.setCursor(0, 0);
+  for(uint8_t i=0; i < 20*4; ++i)
+    lcd.print(" ");
+  lcd.setCursor(0, 0);
 }
 
 void printState(const char *msg)
 {
+  clear();
   lcd.setCursor(0, 0);
   lcd.print(msg);
   lcd.setCursor(0, 1);
-  lcd.print(average);
+  lcd.print(last());
 }
 
-void checkVoltage(bool &hasVoltage)
+float checkVoltage(bool &hasVoltage)
 {
   uint8_t values[N_Voltage] = { 0 };
   
@@ -52,12 +85,14 @@ void checkVoltage(bool &hasVoltage)
     delay(50);
   }
 
-  average = 0.0f;
+  float average = 0.0f;
   for(int i=0; i < N_Voltage; ++i)
     average += values[i];
   average /= (float) N_Voltage;
   
   hasVoltage = average > minvoltage;
+
+  return average;
 }
 
 void changeChargerState(bool on)
@@ -100,7 +135,9 @@ void loop()
   
   bool batState = false;
 
-  checkVoltage(batState);
+  float value = checkVoltage(batState);
+  if(batState)
+    push(value);
 
   if(batState)
   {
